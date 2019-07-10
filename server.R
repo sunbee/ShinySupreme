@@ -3,13 +3,11 @@ library(RColorBrewer)
 library(scales)
 library(lattice)
 library(dplyr)
+library(ggplot2)
 
 # Leaflet bindings are a bit slow; for now we'll just sample to compensate
-set.seed(100)
-zipdata <- allzips[sample.int(nrow(allzips), 10000),]
-# By ordering by centile, we ensure that the (comparatively rare) SuperZIPs
-# will be drawn last and thus be easier to see
-zipdata <- zipdata[order(zipdata$centile),]
+# Herbicide data
+herbicides_top_usage <- herbicides[COMPOUND %in% compounds, ]
 
 function(input, output, session) {
 
@@ -22,103 +20,165 @@ function(input, output, session) {
         urlTemplate = "//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
         attribution = 'Maps by <a href="http://www.mapbox.com/">Mapbox</a>'
       ) %>%
-      setView(lng = -93.85, lat = 37.45, zoom = 4)
+      setView(lng=-87.6244, lat=41.8756, zoom=4)
+      
   })
 
-  # A reactive expression that returns the set of zips that are
-  # in bounds right now
-  zipsInBounds <- reactive({
+  herbicides_bounded <- reactive({
     if (is.null(input$map_bounds))
-      return(zipdata[FALSE,])
+      return(herbicides[FALSE, ])
+    
     bounds <- input$map_bounds
-    latRng <- range(bounds$north, bounds$south)
-    lngRng <- range(bounds$east, bounds$west)
-
-    subset(zipdata,
-      latitude >= latRng[1] & latitude <= latRng[2] &
-        longitude >= lngRng[1] & longitude <= lngRng[2])
+    lat_range <- range(bounds$north, bounds$south)
+    lng_range <- range(bounds$east, bounds$west)
+    
+    subset(herbicides,
+           Latitude >= lat_range[1] & Latitude <= lat_range[2] &
+             Longitude >= lng_range[1] & Longitude <= lng_range[2] & 
+             COMPOUND %in% c(input$herbicide, input$check))
   })
-
-  # Precalculate the breaks we'll need for the two histograms
-  centileBreaks <- hist(plot = FALSE, allzips$centile, breaks = 20)$breaks
-
-  output$histCentile <- renderPlot({
-    # If no zipcodes are in view, don't plot
-    if (nrow(zipsInBounds()) == 0)
+  
+  output$histogram <- renderPlot({
+    # Nothing to see here
+    if (nrow(herbicides_bounded()) == 0)
       return(NULL)
-
-    hist(zipsInBounds()$centile,
-      breaks = centileBreaks,
-      main = "SuperZIP score (visible zips)",
-      xlab = "Percentile",
-      xlim = range(allzips$centile),
-      col = '#00DD00',
-      border = 'white')
+    
+    p <- ggplot(herbicides_bounded(), 
+                aes(x=EPEST_HIGH_KG, color=COMPOUND)) +
+      geom_histogram(fill="white") + 
+      scale_x_log10()
+    p
   })
-
-  output$scatterCollegeIncome <- renderPlot({
-    # If no zipcodes are in view, don't plot
-    if (nrow(zipsInBounds()) == 0)
+  
+  output$scatterplot <- renderPlot({
+    if (nrow(herbicides_bounded()) == 0)
       return(NULL)
-
-    print(xyplot(income ~ college, data = zipsInBounds(), xlim = range(allzips$college), ylim = range(allzips$income)))
+    
+    ggplot(herbicides_bounded(), 
+           aes(x=COMPOUND, y=EPEST_HIGH_KG, color=COMPOUND)) + 
+      geom_violin() + scale_y_log10() + 
+      geom_jitter(shape=16, position=position_jitter(0.2)) + 
+      geom_violin()
+  })
+  
+  observe({ # DEBUG map markers
+    compound <- input$herbicide
+    check <- input$check
+    print(compound)
+    print(check)
+    
+    herbicides_targeted = herbicides[COMPOUND %in% c(compound, check), ]
+    herbicides_targeted <- dcast(herbicides_targeted, 
+                                 Places+Latitude+Longitude~COMPOUND, 
+                                 value.var="EPEST_HIGH_KG")
+    print(head(herbicides_targeted))
+    
+    usage.compound <- herbicides_targeted[[compound]]
+    usage.check <- herbicides_targeted[[check]]
+    print(head(usage.compound))
+    print(head(usage.check))
+  })
+  
+  # Wrangle data for rendering based on the compound and check 
+  # selected by the user.
+  pivoted_data <- reactive({
+    compound <- input$herbicide
+    check <- input$check
+    
+    herbicides_targeted = herbicides[COMPOUND %in% c(compound, check), ]
+    herbicides_targeted <- dcast(herbicides_targeted, 
+                                 Places+Latitude+Longitude~COMPOUND, 
+                                 value.var="EPEST_HIGH_KG")
   })
 
-  # This observer is responsible for maintaining the circles and legend,
-  # according to the variables the user has chosen to map to color and size.
+  # Render the usage patterns for the selected compound and check.
+  # This observed responds to the user's choice of compound and check.
   observe({
-    colorBy <- input$color
-    sizeBy <- input$size
+    compound <- input$herbicide
+    check <- input$check
 
-    if (colorBy == "superzip") {
-      # Color and palette are treated specially in the "superzip" case, because
-      # the values are categorical instead of continuous.
-      colorData <- ifelse(zipdata$centile >= (100 - input$threshold), "yes", "no")
-      pal <- colorFactor("viridis", colorData)
-    } else {
-      colorData <- zipdata[[colorBy]]
-      pal <- colorBin("viridis", colorData, 7, pretty = FALSE)
-    }
+    herbicides_targeted <- pivoted_data()
+    
+    usage.compound <- herbicides_targeted[[compound]]
+    usage.check <- herbicides_targeted[[check]]
 
-    if (sizeBy == "superzip") {
-      # Radius is treated specially in the "superzip" case.
-      radius <- ifelse(zipdata$centile >= (100 - input$threshold), 30000, 3000)
-    } else {
-      radius <- zipdata[[sizeBy]] / max(zipdata[[sizeBy]]) * 30000
-    }
+    pal.compound <- colorQuantile(palette="Yellow", domain=usage.compound, n=5)
+    pal.check <- colorQuantile(palette="viridis", domain=usage.check, n=5)
 
-    leafletProxy("map", data = zipdata) %>%
+    radius.compound <- sqrt(usage.compound / max(usage.compound, na.rm=TRUE)) * 70000
+    radius.check <- sqrt(usage.check / max(usage.check, na.rm=TRUE)) * 70000
+      
+    leafletProxy("map", data=herbicides_targeted) %>%
       clearShapes() %>%
-      addCircles(~longitude, ~latitude, radius=radius, layerId=~zipcode,
-        stroke=FALSE, fillOpacity=0.4, fillColor=pal(colorData)) %>%
-      addLegend("bottomleft", pal=pal, values=colorData, title=colorBy,
-        layerId="colorLegend")
+      addCircles(~Longitude, ~Latitude,
+                 radius = radius.compound,
+                 fillColor = pal.compound(usage.compound),
+                 stroke = FALSE,
+                 fillOpacity = 0.3
+      ) %>%
+      addCircles(~Longitude, ~Latitude,
+                 radius=radius.check,
+                 fillColor = pal.check(usage.check),
+                 stroke = FALSE,
+                 fillOpacity = 0.7,
+                 layerId = ~Places) %>%
+      addLegend("bottomleft", pal=pal.check, values=usage.check, title=check,
+                layerId = "colorLegend")
+
   })
 
-  # Show a popup at the given location
-  showZipcodePopup <- function(zipcode, lat, lng) {
-    selectedZip <- allzips[allzips$zipcode == zipcode,]
+  observe({ # DEBUG popup, etc.
+  # Acquire context to handle a mouse-click over the map area.
+    event <- input$map_shape_click
+    if (is.null(event) | is.null(event$id)) 
+      return()
+    else {
+      # Unpack the event object
+      print(event$id)
+      print(event$lat)
+      print(event$lng)
+      
+      # Apply context for action
+      # Obtain pivot table for selected compound and check, and
+      # select the record for the location clicked
+      herbicides_targeted <- pivoted_data()
+      selection = herbicides_targeted[Places == event$id, ]
+      print(selection)
+      print(as.character(selection[["Places"]]))
+      print(selection[[input$herbicide]])
+    
+    }
+  })
+  
+  # Show detailed information about herbicide usage at location
+  # indicated by map-click.
+  showLocationSummary <- function(location, lat, lng) {
+    herbicides_targeted <- pivoted_data()
+    selection <- herbicides_targeted[Places == location, ]
     content <- as.character(tagList(
-      tags$h4("Score:", as.integer(selectedZip$centile)),
-      tags$strong(HTML(sprintf("%s, %s %s",
-        selectedZip$city.x, selectedZip$state.x, selectedZip$zipcode
-      ))), tags$br(),
-      sprintf("Median household income: %s", dollar(selectedZip$income * 1000)), tags$br(),
-      sprintf("Percent of adults with BA: %s%%", as.integer(selectedZip$college)), tags$br(),
-      sprintf("Adult population: %s", selectedZip$adultpop)
+      tags$h4("Score:", as.integer(selection[[input$herbicide]])),
+      tags$strong(HTML(sprintf("%s", selection$Places))),
+      tags$br(),
+      sprintf("Maximum est. %s usage: %d", input$herbicide, as.integer(selection[[input$herbicide]])),
+      tags$br(),
+      sprintf("Maximum est. %s usage: %d", input$check, as.integer(selection[[input$check]])), 
+      tags$br()
     ))
-    leafletProxy("map") %>% addPopups(lng, lat, content, layerId = zipcode)
+    leafletProxy("map") %>% addPopups(lng, lat, content, layerId = location)
   }
+  
 
   # When map is clicked, show a popup with city info
   observe({
+    herbicides_targeted <- pivoted_data()
+    
     leafletProxy("map") %>% clearPopups()
     event <- input$map_shape_click
-    if (is.null(event))
+    if (is.null(event) | is.null(event$id))
       return()
 
     isolate({
-      showZipcodePopup(event$id, event$lat, event$lng)
+      showLocationSummary(event$id, event$lat, event$lng)
     })
   })
 

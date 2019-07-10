@@ -1,4 +1,10 @@
 library(dplyr)
+library(data.table)
+
+herbicides <- readRDS("data/herbicides.rds")
+compounds <- herbicides[, .(TOT_USAGE = sum(EPEST_HIGH_KG, na.rm=TRUE)), by=c("COMPOUND")][,
+                QUANT := quantile(TOT_USAGE, probs=0.8, na.rm=TRUE)][, 
+                SEL := TOT_USAGE > QUANT][SEL == TRUE, COMPOUND]
 
 allzips <- readRDS("data/superzip.rds")
 allzips$latitude <- jitter(allzips$latitude)

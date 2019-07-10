@@ -1,16 +1,13 @@
 library(leaflet)
 
 # Choices for drop-downs
-vars <- c(
-  "Is SuperZIP?" = "superzip",
-  "Centile score" = "centile",
-  "College education" = "college",
-  "Median income" = "income",
-  "Population" = "adultpop"
-)
+checks <- c("GLYPHOSATE", 
+            "ATRAZINE",
+            "2,4-D",
+            "ACETOCHLOR",
+            "DICAMBA")
 
-
-navbarPage("Superzip", id="nav",
+navbarPage("Agricultural Chemistries", id="nav",
 
   tabPanel("Interactive map",
     div(class="outer",
@@ -29,17 +26,18 @@ navbarPage("Superzip", id="nav",
         draggable = TRUE, top = 60, left = "auto", right = 20, bottom = "auto",
         width = 330, height = "auto",
 
-        h2("ZIP explorer"),
+        h2("Chemistries explorer"),
 
-        selectInput("color", "Color", vars),
-        selectInput("size", "Size", vars, selected = "adultpop"),
+        selectInput("herbicide", "Compund", compounds),
+        selectInput("check", "Check", checks),
         conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
           # Only prompt for threshold when coloring or sizing by superzip
           numericInput("threshold", "SuperZIP threshold (top n percentile)", 5)
         ),
 
-        plotOutput("histCentile", height = 200),
-        plotOutput("scatterCollegeIncome", height = 250)
+        #plotOutput("histCentile", height = 200),
+        plotOutput("histogram", height=200),
+        plotOutput("scatterplot", height = 250)
       ),
 
       tags$div(id="cite",
