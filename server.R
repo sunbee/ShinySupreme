@@ -5,16 +5,17 @@ library(lattice)
 library(dplyr)
 library(ggplot2)
 
-# Leaflet bindings are a bit slow; for now we'll just sample to compensate
-# Herbicide data
+# Future option to compare all other chemistries to glyphosate.
+# Random sampling will address potential latency issues with
+# rending in leaflet.
 herbicides_top_usage <- herbicides[COMPOUND %in% compounds, ]
 
 function(input, output, session) {
 
   ## Interactive Map ###########################################
 
-  # Create the map
   output$map <- renderLeaflet({
+  # Create the map
     leaflet() %>%
       addTiles(
         urlTemplate = "//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
@@ -25,6 +26,20 @@ function(input, output, session) {
   })
 
   herbicides_bounded <- reactive({
+  # Show data within bounds of the interactive map.
+  # input$map_bounds: use to achieve JS equivalent of:
+  #   map.getBounds().getEast()
+  #   map.getBounds().getWest()
+  #   map.getBounds().getNorth()
+  #   map.getBounds().getSouth()
+  # input$herbicide: selected herbicide
+  # input$check: selected comparator
+  # herbicides: global table of all compounds and their attributes
+  #   Subset global herbicide data for the bounded region
+  #   Subset for selected compound and check
+  # output$histogram: plot the usage patterns for selected compounds
+  # output$scattedplot: plot the usage patterns for selected compounds
+    
     if (is.null(input$map_bounds))
       return(herbicides[FALSE, ])
     
@@ -46,7 +61,8 @@ function(input, output, session) {
     p <- ggplot(herbicides_bounded(), 
                 aes(x=EPEST_HIGH_KG, color=COMPOUND)) +
       geom_histogram(fill="white") + 
-      scale_x_log10()
+      scale_x_log10() +
+      theme(legend.position = "top")
     p
   })
   
@@ -58,10 +74,12 @@ function(input, output, session) {
            aes(x=COMPOUND, y=EPEST_HIGH_KG, color=COMPOUND)) + 
       geom_violin() + scale_y_log10() + 
       geom_jitter(shape=16, position=position_jitter(0.2)) + 
-      geom_violin()
+      geom_violin() +
+      theme(legend.position = "top")
   })
   
-  observe({ # DEBUG map markers
+  observe({ 
+  # DEBUG map markers
     compound <- input$herbicide
     check <- input$check
     print(compound)
@@ -71,6 +89,7 @@ function(input, output, session) {
     herbicides_targeted <- dcast(herbicides_targeted, 
                                  Places+Latitude+Longitude~COMPOUND, 
                                  value.var="EPEST_HIGH_KG")
+    herbicides_targeted$Score <- ceiling(ecdf(herbicides_targeted[[check]])(herbicides_targeted[[check]]) * 100)
     print(head(herbicides_targeted))
     
     usage.compound <- herbicides_targeted[[compound]]
@@ -79,9 +98,20 @@ function(input, output, session) {
     print(head(usage.check))
   })
   
-  # Wrangle data for rendering based on the compound and check 
-  # selected by the user.
   pivoted_data <- reactive({
+  # Wrangle data for rendering based on the user's selection
+  # of compounds to view and compare. Pivot the table which is
+  # in long form to wide form so locations are in rows and the
+  # selected compounds in columns, data being max. est. usage.
+  #
+  # input$herbicide: selected compound
+  # input$check: selected comparator
+  # herbicides: global table with usage of all compounds and all locations
+  #   in long form with USGS data for 2012.
+  # herbicides_targeted: usage data for selected compounds across locations
+  #   in wide form, showing max usage (estimate). Add a score for selected
+  #   comparator (default: glyphosate) based on percentile rank.
+  
     compound <- input$herbicide
     check <- input$check
     
@@ -89,11 +119,16 @@ function(input, output, session) {
     herbicides_targeted <- dcast(herbicides_targeted, 
                                  Places+Latitude+Longitude~COMPOUND, 
                                  value.var="EPEST_HIGH_KG")
+    herbicides_targeted$Score <- ceiling(ecdf(herbicides_targeted[[check]])(herbicides_targeted[[check]]) * 100)
+    herbicides_targeted
   })
 
-  # Render the usage patterns for the selected compound and check.
-  # This observed responds to the user's choice of compound and check.
   observe({
+  # Render the geospatial usage patterns for the selected compound and check.
+  # input$herbicide: selected compound
+  # input$check: selected comparator
+  # herbicides_targeted: react chain yielding data in shape for mapping
+  # proxy_map: geo-spatial rendering of data about the selected compounds
     compound <- input$herbicide
     check <- input$check
 
@@ -102,31 +137,47 @@ function(input, output, session) {
     usage.compound <- herbicides_targeted[[compound]]
     usage.check <- herbicides_targeted[[check]]
 
-    pal.compound <- colorQuantile(palette="Yellow", domain=usage.compound, n=5)
+    pal.compound <- colorQuantile(palette="blue", domain=usage.compound, n=5)
     pal.check <- colorQuantile(palette="viridis", domain=usage.check, n=5)
 
     radius.compound <- sqrt(usage.compound / max(usage.compound, na.rm=TRUE)) * 70000
     radius.check <- sqrt(usage.check / max(usage.check, na.rm=TRUE)) * 70000
       
-    leafletProxy("map", data=herbicides_targeted) %>%
+    proxy_map <- leafletProxy("map", data=herbicides_targeted) %>%
       clearShapes() %>%
       addCircles(~Longitude, ~Latitude,
                  radius = radius.compound,
                  fillColor = pal.compound(usage.compound),
                  stroke = FALSE,
-                 fillOpacity = 0.3
+                 fillOpacity = 0.6,
+                 layerId = ~ paste(Places, "_"),
+                 group = "Compound"
       ) %>%
       addCircles(~Longitude, ~Latitude,
                  radius=radius.check,
                  fillColor = pal.check(usage.check),
                  stroke = FALSE,
-                 fillOpacity = 0.7,
-                 layerId = ~Places) %>%
+                 fillOpacity = 0.6,
+                 layerId = ~Places,
+                 group = "Check") %>% 
       addLegend("bottomleft", pal=pal.check, values=usage.check, title=check,
-                layerId = "colorLegend")
-
+                layerId = "colorLegend",
+                group = "Check") 
+    proxy_map
+  
   })
 
+  observe({
+  # Show or hide the comparator which is a semi-transparent overlay.
+    if (input$compare == FALSE) {
+      leafletProxy("map") %>% hideGroup("Check")
+      # Legend shows although grouped together.
+    } else {
+      leafletProxy("map") %>% showGroup("Check") 
+    }
+    
+  })
+  
   observe({ # DEBUG popup, etc.
   # Acquire context to handle a mouse-click over the map area.
     event <- input$map_shape_click
@@ -150,13 +201,18 @@ function(input, output, session) {
     }
   })
   
-  # Show detailed information about herbicide usage at location
-  # indicated by map-click.
   showLocationSummary <- function(location, lat, lng) {
+  # Show detailed information about herbicide usage at clicked location.
+  # location: obtained from map-click event bearing location as layer Id
+  # lat, lng: latitude and longitude obtained from map-click event object
+  # herbicides_targeted: reach chain yield with data upon selected compounds  
+  #   across all locations, in wide form for plotting. Has the score as
+  #   rank-based percentile for the selected comparator. 
+  
     herbicides_targeted <- pivoted_data()
     selection <- herbicides_targeted[Places == location, ]
     content <- as.character(tagList(
-      tags$h4("Score:", as.integer(selection[[input$herbicide]])),
+      tags$h4("Score:", as.integer(selection[["Score"]])),
       tags$strong(HTML(sprintf("%s", selection$Places))),
       tags$br(),
       sprintf("Maximum est. %s usage: %d", input$herbicide, as.integer(selection[[input$herbicide]])),
@@ -178,11 +234,14 @@ function(input, output, session) {
       return()
 
     isolate({
-      showLocationSummary(event$id, event$lat, event$lng)
+    # Strip the lagging underscore from layer Id for the compound.
+      showLocationSummary(sub(" _", "", event$id), event$lat, event$lng)
     })
   })
 
 
+  ## Supreme Predictor #######################################
+  
   ## Data Explorer ###########################################
 
   observe({

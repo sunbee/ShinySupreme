@@ -26,14 +26,16 @@ navbarPage("Agricultural Chemistries", id="nav",
         draggable = TRUE, top = 60, left = "auto", right = 20, bottom = "auto",
         width = 330, height = "auto",
 
-        h2("Chemistries explorer"),
+        h2("Chemistries Explorer"),
+        h4("United States Geological Survey"),
 
         selectInput("herbicide", "Compund", compounds),
-        selectInput("check", "Check", checks),
+        selectInput("check", "Comparator", checks),
         conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
           # Only prompt for threshold when coloring or sizing by superzip
           numericInput("threshold", "SuperZIP threshold (top n percentile)", 5)
         ),
+        checkboxInput("compare", "Show/Hide", TRUE),
 
         #plotOutput("histCentile", height = 200),
         plotOutput("histogram", height=200),
