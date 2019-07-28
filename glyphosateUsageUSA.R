@@ -140,12 +140,10 @@ setkeyv(DT_coords, "Places")
 DT <- DT_coords[DT]
 
 # 4. Save to disk after clean-up
-drop.columns <- c("SearchTerm", 
-                  "state", "state_code", "state_name", 
-                  "county", "county_code")
+drop.columns <- c("SearchTerm", "state", "state_code", "county_code")
 DT[, (drop.columns) := NULL]
-
-
+setnames(DT, old=c("state_name", "county"), new=c("State", "County"))
+setnames(DT, old=c("Places"), new=c("Location"))
 write.csv(DT, "herbicides.csv", row.names=FALSE)
 saveRDS(DT, "herbicides.rds")
 

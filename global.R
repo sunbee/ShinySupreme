@@ -6,6 +6,11 @@ compounds <- herbicides[, .(TOT_USAGE = sum(EPEST_HIGH_KG, na.rm=TRUE)), by=c("C
                 QUANT := quantile(TOT_USAGE, probs=0.8, na.rm=TRUE)][, 
                 SEL := TOT_USAGE > QUANT][SEL == TRUE, COMPOUND]
 
+# Load the models to employ in prediction and sample input for prediction here
+load("models/newdata.rda")  # newdata
+load("models/CART.rda")     # StevensTree
+load("models/Forest.rda")   # StevensForest
+
 allzips <- readRDS("data/superzip.rds")
 allzips$latitude <- jitter(allzips$latitude)
 allzips$longitude <- jitter(allzips$longitude)

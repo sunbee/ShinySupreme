@@ -87,7 +87,7 @@ function(input, output, session) {
     
     herbicides_targeted = herbicides[COMPOUND %in% c(compound, check), ]
     herbicides_targeted <- dcast(herbicides_targeted, 
-                                 Places+Latitude+Longitude~COMPOUND, 
+                                 Location+Latitude+Longitude~COMPOUND, 
                                  value.var="EPEST_HIGH_KG")
     herbicides_targeted$Score <- ceiling(ecdf(herbicides_targeted[[check]])(herbicides_targeted[[check]]) * 100)
     print(head(herbicides_targeted))
@@ -117,7 +117,7 @@ function(input, output, session) {
     
     herbicides_targeted = herbicides[COMPOUND %in% c(compound, check), ]
     herbicides_targeted <- dcast(herbicides_targeted, 
-                                 Places+Latitude+Longitude~COMPOUND, 
+                                 Location+Latitude+Longitude~COMPOUND, 
                                  value.var="EPEST_HIGH_KG")
     herbicides_targeted$Score <- ceiling(ecdf(herbicides_targeted[[check]])(herbicides_targeted[[check]]) * 100)
     herbicides_targeted
@@ -150,7 +150,7 @@ function(input, output, session) {
                  fillColor = pal.compound(usage.compound),
                  stroke = FALSE,
                  fillOpacity = 0.6,
-                 layerId = ~ paste(Places, "_"),
+                 layerId = ~ paste(Location, "_"),
                  group = "Compound"
       ) %>%
       addCircles(~Longitude, ~Latitude,
@@ -158,7 +158,7 @@ function(input, output, session) {
                  fillColor = pal.check(usage.check),
                  stroke = FALSE,
                  fillOpacity = 0.6,
-                 layerId = ~Places,
+                 layerId = ~Location,
                  group = "Check") %>% 
       addLegend("bottomleft", pal=pal.check, values=usage.check, title=check,
                 layerId = "colorLegend",
@@ -193,9 +193,9 @@ function(input, output, session) {
       # Obtain pivot table for selected compound and check, and
       # select the record for the location clicked
       herbicides_targeted <- pivoted_data()
-      selection = herbicides_targeted[Places == event$id, ]
+      selection = herbicides_targeted[Location == event$id, ]
       print(selection)
-      print(as.character(selection[["Places"]]))
+      print(as.character(selection[["Location"]]))
       print(selection[[input$herbicide]])
     
     }
@@ -210,10 +210,10 @@ function(input, output, session) {
   #   rank-based percentile for the selected comparator. 
   
     herbicides_targeted <- pivoted_data()
-    selection <- herbicides_targeted[Places == location, ]
+    selection <- herbicides_targeted[Location == location, ]
     content <- as.character(tagList(
       tags$h4("Score:", as.integer(selection[["Score"]])),
-      tags$strong(HTML(sprintf("%s", selection$Places))),
+      tags$strong(HTML(sprintf("%s", selection$Location))),
       tags$br(),
       sprintf("Maximum est. %s usage: %d", input$herbicide, as.integer(selection[[input$herbicide]])),
       tags$br(),
@@ -241,6 +241,60 @@ function(input, output, session) {
 
 
   ## Supreme Predictor #######################################
+  
+  x <- reactive({
+    # Condition inputs for feeding into predictive models
+    this = list()
+    this$Circuit = input$circuit
+    this$Issue = paste0(strsplit(input$issue, " ")[[1]], collapse = '')
+    this$Petitioner = paste0(strsplit(toupper(input$petitioner), " ")[[1]], collapse='.')
+    this$Respondent = paste0(strsplit(toupper(input$respondent), " ")[[1]], collapse='.')
+    this$LowerCourt = ifelse(input$ideology, "liberal", "conser")
+    this$Unconst = ifelse(input$unconstitutional, 1, 0)
+    print(paste(unlist(this), sep="", collapse="|"))
+    this
+  })
+  
+  xdf <- reactive({ # Chain reaction
+    # Assemple predictors into a data frame with the newdata template
+    that <- x()
+    predictor <- newdata
+    predictor$Circuit     <- that$Circuit
+    predictor$Issue       <- that$Issue
+    predictor$Petitioner  <- that$Petitioner
+    predictor$Respondent  <- that$Respondent
+    predictor$LowerCourt  <- that$LowerCourt
+    predictor$Unconst     <- that$Unconst
+    print(paste(unlist(predictor), sep="", collapse="|"))
+    predictor
+  })
+  
+  output$judge <- renderImage({
+    # Show the judge's reaction based on the prediction from random forests. The judge 
+    # is mad (i.e. over-turns the lower court's ruling) or glad.
+    that <- x()
+    if (that$Unconst) {
+      return(list(
+        src = "images/judge_mad.jpg", 
+        filetype = "image/jpeg", 
+        alt = "Judge mad",
+        height = 150))
+    } else {
+      return(list(
+        src = "images/judge_glad.jpg", 
+        filetype = "image/jpeg", 
+        alt = "Judge glad",
+        height = 150))
+    }
+  }, deleteFile = FALSE)
+  
+  output$CART <- renderC3Gauge({
+    # Show the judge's reaction as probability of over-turning a lower court's ruling.
+    out <- predict(StevensTree, newdata=xdf(), type='prob')
+    prob = floor(out[1, 2] * 100)
+    print(prob)
+    C3Gauge(prob)
+  })
   
   ## Data Explorer ###########################################
 

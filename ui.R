@@ -1,4 +1,8 @@
+library(data.table)
+library(shiny)
 library(leaflet)
+library(shinyWidgets)
+library(C3)
 
 # Choices for drop-downs
 checks <- c("GLYPHOSATE", 
@@ -48,6 +52,78 @@ navbarPage("Agricultural Chemistries", id="nav",
     )
   ),
 
+  tabPanel("AI Predictions",
+    sidebarLayout(
+      sidebarPanel(
+        # Circult court of origin
+        # There are 13 circuit courts, of which the 1st through 11
+        # and Washington, DC are defined by region and the federal
+        # court is defined by the subject matter of the case.
+         sliderTextInput("circuit", "Circuit Court", 
+                         c("1st", "2nd", "3rd", "4th", "5th", "6th",
+                           "7th", "8th", "9th", "10th", "11th",
+                           "DC", "FED"),
+                         selected = "9th",
+                         grid=TRUE,
+                         force_edges=TRUE),
+        # Issue Area:
+        selectInput("issue", "Issue Area",
+                    c("Economic Activity",
+                      "Judicial Power",
+                      "Criminal Procedure",
+                      "Due Process",
+                      "Federalism And Interstate Relations",
+                      "Civil Rights",
+                      "First Amendment",
+                      "Federal Taxation",
+                      "Unions",
+                      "Privacy",
+                      "Attorneys"),
+                    selected = "Due Process"),
+        selectInput("petitioner", "Petitioner Type",
+                    c("Business", 
+                      "City",
+                      "State",
+                      "US",
+                      "Employee",
+                      "Employer",
+                      "Goverment Official",
+                      "Politician",
+                      "Injured Person",
+                      "American Indian",
+                      "Other"),
+                    selected = "Injured Person"),
+        selectInput("respondent", "Petitioner Type",
+                    c("Business", 
+                      "City",
+                      "State",
+                      "US",
+                      "Employee",
+                      "Employer",
+                      "Goverment Official",
+                      "Politician",
+                      "Injured Person",
+                      "American Indian",
+                      "Other"),
+                    selected = "Business"),
+         materialSwitch("unconstitutional", "Constitutionality", 
+                        status="danger"),
+         prettyCheckbox("ideology", "Liberal bias of lower court")
+      ),   # sidebar panel 
+       
+       # Show a plot of the generated distribution
+      mainPanel(
+        fluidRow(
+          column(width = 6, class = "well", 
+                 h4("CART"),
+                 C3GaugeOutput("CART", height = 150, "auto")),
+          column(width = 6, class = "well",
+                 h4("Random Forests"),
+                 imageOutput("judge", height = 150)))
+       )   # main panel
+     )   # sidebar layout
+  ),
+  
   tabPanel("Data explorer",
     fluidRow(
       column(3,
