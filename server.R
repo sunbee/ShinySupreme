@@ -117,7 +117,7 @@ function(input, output, session) {
     
     herbicides_targeted = herbicides[COMPOUND %in% c(compound, check), ]
     herbicides_targeted <- dcast(herbicides_targeted, 
-                                 Location+Latitude+Longitude~COMPOUND, 
+                                 State+County+Location+Latitude+Longitude~COMPOUND, 
                                  value.var="EPEST_HIGH_KG")
     herbicides_targeted$Score <- ceiling(ecdf(herbicides_targeted[[check]])(herbicides_targeted[[check]]) * 100)
     herbicides_targeted
@@ -296,6 +296,11 @@ function(input, output, session) {
     C3Gauge(prob)
   })
   
+  # output$video <- renderUI({
+  #   HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/uCgKGha4iJk" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')
+  # })
+  
+  
   ## Data Explorer ###########################################
 
   observe({
@@ -332,7 +337,7 @@ function(input, output, session) {
     })
   })
 
-  output$ziptable <- DT::renderDataTable({
+  output$bigtable <- DT::renderDataTable({
     df <- herbicides %>%
       filter(
         # Score >= input$minScore,

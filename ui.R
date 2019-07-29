@@ -36,10 +36,10 @@ navbarPage("Agricultural Chemistries", id="nav",
 
         selectInput("herbicide", "Compund", compounds),
         selectInput("check", "Comparator", checks),
-        conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
-          # Only prompt for threshold when coloring or sizing by superzip
-          numericInput("threshold", "SuperZIP threshold (top n percentile)", 5)
-        ),
+        # conditionalPanel("input.color == 'superzip' || input.size == 'superzip'",
+        #   # Only prompt for threshold when coloring or sizing by superzip
+        #   numericInput("threshold", "SuperZIP threshold (top n percentile)", 5)
+        # ),
         checkboxInput("compare", "Show/Hide", TRUE),
 
         #plotOutput("histCentile", height = 200),
@@ -114,7 +114,7 @@ navbarPage("Agricultural Chemistries", id="nav",
        
        # Show a plot of the generated distribution
       mainPanel(
-        tags$style(".span12 {background-color: black;}"),
+        # tags$style(".span12 {background-color: black;}"),
         fluidRow(
           column(width = 6, class = "well",
                  h4("CART"),
@@ -122,7 +122,8 @@ navbarPage("Agricultural Chemistries", id="nav",
           column(width = 6, class = "well",
                  h4("Random Forests"),
                  imageOutput("judge", height = 150, "auto"))
-        )   # row       
+        )   # row 
+        # uiOutput("video")
       )   # main panel
     )   # sidebar layout
   ),
@@ -143,16 +144,16 @@ navbarPage("Agricultural Chemistries", id="nav",
         )
       )
     ),
-    fluidRow(
-      column(1,
-        numericInput("minScore", "Min score", min=0, max=100, value=0)
-      ),
-      column(1,
-        numericInput("maxScore", "Max score", min=0, max=100, value=100)
-      )
-    ),
+    # fluidRow(
+    #   column(1,
+    #     numericInput("minScore", "Min score", min=0, max=100, value=0)
+    #   ),
+    #   column(1,
+    #     numericInput("maxScore", "Max score", min=0, max=100, value=100)
+    #   )
+    # ),
     hr(),
-    DT::dataTableOutput("ziptable")
+    DT::dataTableOutput("bigtable")
   ),
 
   conditionalPanel("false", icon("crosshair"))

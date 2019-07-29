@@ -18,7 +18,14 @@ body, label, input, button, select {
   font-weight: 200;
 }
 h1, h2, h3, h4 { font-weight: 400 }
-h4{ background-color: hsla(290,100%,50%,0.3); }
+h4{ 
+  background-color: #ff8c00; 
+  color: white;
+  text-align: center;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  margin-top: 0px;
+}
 
 #controls {
   /* Appearance */
@@ -53,5 +60,12 @@ h4{ background-color: hsla(290,100%,50%,0.3); }
 .col-sm-6.well {
 	margin-right: 15px;
 	padding-top: 0px;
+	padding-left: 0px;
+	padding-right: 0px;
 	width: 45%;
+	border-color: #ff8c00;
+}
+
+.well {
+  border-color: #337ab7;
 }
