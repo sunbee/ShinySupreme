@@ -49,9 +49,6 @@ h4{ background-color: hsla(290,100%,50%,0.3); }
   background-color: white !important;
 }
 
-/* Tweaked wells for side-side juxtaposition */
 .col-sm-6.well {
-	margin-right: 15px;
-	padding-top: 0px;
-	width: 45%;
+  background-color: hsla(120,60%,70%,0.3);
 }

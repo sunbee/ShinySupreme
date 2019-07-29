@@ -20,6 +20,7 @@ navbarPage("Agricultural Chemistries", id="nav",
         # Include our custom CSS
         includeCSS("styles.css"),
         includeScript("gomap.js")
+        
       ),
 
       # If not using custom CSS, set height of leafletOutput to a number instead of percent
@@ -113,30 +114,32 @@ navbarPage("Agricultural Chemistries", id="nav",
        
        # Show a plot of the generated distribution
       mainPanel(
+        tags$style(".span12 {background-color: black;}"),
         fluidRow(
-          column(width = 6, class = "well", 
+          column(width = 6, class = "well",
                  h4("CART"),
                  C3GaugeOutput("CART", height = 150, "auto")),
           column(width = 6, class = "well",
                  h4("Random Forests"),
-                 imageOutput("judge", height = 150)))
-       )   # main panel
-     )   # sidebar layout
+                 imageOutput("judge", height = 150, "auto"))
+        )   # row       
+      )   # main panel
+    )   # sidebar layout
   ),
   
   tabPanel("Data explorer",
     fluidRow(
       column(3,
-        selectInput("states", "States", c("All states"="", structure(state.abb, names=state.name), "Washington, DC"="DC"), multiple=TRUE)
+        selectInput("states", "States", herbicides[, sort(unique(State))], multiple=TRUE)
       ),
       column(3,
         conditionalPanel("input.states",
-          selectInput("cities", "Cities", c("All cities"=""), multiple=TRUE)
+          selectInput("counties", "Counties", c("All counties"=""), multiple=TRUE)
         )
       ),
       column(3,
         conditionalPanel("input.states",
-          selectInput("zipcodes", "Zipcodes", c("All zipcodes"=""), multiple=TRUE)
+          selectInput("chemistries", "Chemistries", c("All chemistries"=""), multiple=TRUE)
         )
       )
     ),
