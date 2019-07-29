@@ -21,8 +21,11 @@ function(input, output, session) {
         urlTemplate = "//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
         attribution = 'Maps by <a href="http://www.mapbox.com/">Mapbox</a>'
       ) %>%
-      setView(lng=-87.6244, lat=41.8756, zoom=4)
-      
+      setView(lng=-87.6244, lat=41.8756, zoom=4) %>%
+      addEasyButton(easyButton(icon = "fa-globe", title = "Zoom to level 4",
+                               onClick = JS("function(btn, map){ map.setZoom(4); }"))) %>%
+      addEasyButton(easyButton(icon="fa-crosshairs", title="Locate me",
+                               onClick = JS("function(btn, map){ map.locate({setView: true}); }")))
   })
 
   herbicides_bounded <- reactive({
