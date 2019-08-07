@@ -114,7 +114,6 @@ navbarPage("Agricultural Chemistries", id="nav",
        
        # Show a plot of the generated distribution
       mainPanel(
-        # tags$style(".span12 {background-color: black;}"),
         fluidRow(
           column(width = 5, offset = 0, class = "well",
                  h4("CART"),
@@ -126,11 +125,22 @@ navbarPage("Agricultural Chemistries", id="nav",
         ),   # row
         fluidRow(
           column(width = 3, offset = 0, class="well",
-                 includeHTML("model_about.html")),
+                 h4("Tree"),
+                 align = "center",
+                 imageOutput("tree", height= 150, "auto")),
           column(width = 7, offset = 0, class="well",
-                 includeHTML("model_about.html"))
-        )
-        # uiOutput("video")
+                 h4("More about CART"),
+                 includeHTML("aboutCART.html"))
+        ),   # row
+        fluidRow(
+          column(width = 7, offset = 0, class="well",
+                 h4("More about Random Forests"),
+                 includeHTML("aboutRandomForests.html")),
+          column(width = 3, offset = 0, class="well",
+                 h4("Forest"),
+                 align = "center",
+                 imageOutput("forest", height= 150, "auto"))
+        )   # row
       )   # main panel
     )   # sidebar layout
   ),

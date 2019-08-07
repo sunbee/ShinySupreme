@@ -291,6 +291,24 @@ function(input, output, session) {
     }
   }, deleteFile = FALSE)
   
+  output$tree <- renderImage({
+    return(list(
+      src = "images/PythagoreanTree.png",
+      filetype = "image/png",
+      alt = "Pythagorean Tree",
+      height = 150,
+      width = "100%"))
+  }, deleteFile = FALSE)
+  
+  output$forest <- renderImage({
+    return(list(
+      src = "images/PythagoreanForest.png",
+      filetype = "image/png",
+      alt = "Pythagorean Forest",
+      height= 150
+    ))
+  }, deleteFile = FALSE)
+  
   output$CART <- renderC3Gauge({
     # Show the judge's reaction as probability of over-turning a lower court's ruling.
     out <- predict(StevensTree, newdata=xdf(), type='prob')
