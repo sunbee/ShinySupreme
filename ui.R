@@ -116,13 +116,20 @@ navbarPage("Agricultural Chemistries", id="nav",
       mainPanel(
         # tags$style(".span12 {background-color: black;}"),
         fluidRow(
-          column(width = 6, class = "well",
+          column(width = 5, offset = 0, class = "well",
                  h4("CART"),
                  C3GaugeOutput("CART", height = 150, "auto")),
-          column(width = 6, class = "well",
+          column(width = 5, offset = 0, class = "well",
                  h4("Random Forests"),
+                 align = "center", 
                  imageOutput("judge", height = 150, "auto"))
-        )   # row 
+        ),   # row
+        fluidRow(
+          column(width = 3, offset = 0, class="well",
+                 includeHTML("model_about.html")),
+          column(width = 7, offset = 0, class="well",
+                 includeHTML("model_about.html"))
+        )
         # uiOutput("video")
       )   # main panel
     )   # sidebar layout

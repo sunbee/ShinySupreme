@@ -278,14 +278,14 @@ function(input, output, session) {
     that <- x()
     if (that$Unconst) {
       return(list(
-        src = "images/judge_mad.jpg", 
-        filetype = "image/jpeg", 
+        src = "images/judge_mad.png", 
+        filetype = "image/png", 
         alt = "Judge mad",
         height = 150))
     } else {
       return(list(
-        src = "images/judge_glad.jpg", 
-        filetype = "image/jpeg", 
+        src = "images/judge_glad.png", 
+        filetype = "image/png", 
         alt = "Judge glad",
         height = 150))
     }

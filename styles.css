@@ -57,12 +57,18 @@ h4{
 }
 
 /* Tweaked wells for side-side juxtaposition */
-.col-sm-6.well {
+.col-sm-5.well, .col-sm-3.well, .col-sm-7.well {
 	margin-right: 15px;
 	padding-top: 0px;
 	padding-left: 0px;
 	padding-right: 0px;
-	width: 45%;
+	border-color: #ff8c00;
+}
+
+.col-sm-10.well {
+	padding-top: 0px;
+	padding-left: 0px;
+	padding-right: 0px;
 	border-color: #ff8c00;
 }
 
